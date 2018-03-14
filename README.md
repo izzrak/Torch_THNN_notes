@@ -1,2 +1,2 @@
-# Torch_THNN_notes
-Commets on Troch CNN layers implementations
+# Torch THNN notes
+Commets on Troch CNN layers implementations for personal studys
