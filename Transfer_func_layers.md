@@ -4,6 +4,39 @@
 早期的激活函数(sigmoid, tanh)在浅层的神经网络中，具有很好的效果，但随着网络的复杂化，在卷积神经网络(CNN)中，ReLU(线性整流函数)具有结构简单，正向计算和反向传递运算量低等优点。
 
 ## ReLU
+线性整流函数（Rectified Linear Unit, ReLU）,又称修正线性单元, 是一种人工神经网络中常用的激活函数，通常指代以斜坡函数及其变种为代表的非线性函数。
+
+`ReLU`的定义如下：
+```lua
+f(x) = max(0, x)
+```
+在THNN中，使用nn.ReLU调用函数，传递给Threshold.c执行计算：
+```lua
+f = nn.ReLU([inplace]) 。
+```
+- 输入数据(THTensor *input)：输入数据，
+- 输出数据(THTensor *output)：输出数据，
+- 阈值(accreal threshold_)：在ReLU中，阈值为0
+- 阈值外数值(accreal val_)：在ReLU中，阈值外数值为0
+- 计算模式(inplace)：为true则在原变量上操作，为false则在其他变量上操作
+
+C语言核心代码如下：
+### inplace模式
+```cpp
+TH_TENSOR_APPLY(real, input,
+    if (*input_data <= threshold)
+         *input_data = val;
+);
+THTensor_(set)(output, input);
+```
+### 在外部变量中操作
+```cpp
+THTensor_(resizeAs)(output, input);
+TH_TENSOR_APPLY2(real, output, real, input,
+  *output_data = (*input_data > threshold) ? *input_data : val;
+);
+```
+两种方式都需要对每一个输入元素进行比较，所以比较的计算量为输入元素尺寸乘积。
 
 ## SoftMax
 [Softmax函数](https://en.wikipedia.org/wiki/Softmax_function)，或称归一化指数函数，是逻辑函数的一种推广。它能将一个含任意实数的K维的向量 
@@ -15,6 +48,7 @@
 f_i(x) = exp(x_i - shift) / sum_j exp(x_j - shift)
 ```
 其中`shift = max_i(x_i)`，将指数计算固定在负数域，避免溢出。
+
 在THNN中，使用nn.SoftMax调用函数，传递给[SoftMax.c](https://github.com/torch/nn/blob/master/lib/THNN/generic/SoftMax.c)执行计算
 ```lua
 f = nn.SoftMax()
@@ -48,7 +82,7 @@ for (d = 0; d < dim; d++)
 }
 ```
 ### 完成Softmax函数的计算
-计算指数时，需要先计算输入向量减去最大值的数值，在进行指数运算，之后对指数进行求和。在向量归一化中，需要对向量进行除法操作。则计算量为dim*(2*加减+1*指数+1*除法)
+计算指数时，需要先计算输入向量减去最大值的数值，在进行指数运算，之后对指数进行求和。在向量归一化中，需要对向量进行除法操作。则计算量为dim*(2* 加减 + 1* 指数 + 1* 除法)
 ```cpp
 sum = 0;
 // 计算向量元素指数，并求和
